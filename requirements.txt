@@ -2,5 +2,11 @@
 opencv-python>=4.8
 numpy>=1.26
 
+# Backend (runtime floor-plan upload API)
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9
+
 # Dev / tests
 pytest>=8.0
+httpx>=0.27

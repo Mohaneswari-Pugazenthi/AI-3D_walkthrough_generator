@@ -56,6 +56,53 @@
     </div>
   </header>
 
+  <section class="padded upload-section" id="upload">
+    <div class="container upload-inner">
+      <h2 class="section-title">Upload Your Floor Plan</h2>
+      <p class="section-kicker">Runs the live TENIX pipeline on your own image, right in this browser session</p>
+
+      <div class="upload-dropzone" id="dropzone">
+        <input type="file" id="file-input" accept=".png,.jpg,.jpeg,image/png,image/jpeg" hidden />
+        <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M12 16V4M12 4 7 9M12 4l5 5" />
+          <path d="M4 16v2.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V16" />
+        </svg>
+        <p class="dropzone-text">Drag &amp; drop a floor plan here</p>
+        <p class="dropzone-or">or</p>
+        <button type="button" class="btn btn-secondary" id="choose-file-btn">Choose Floor Plan</button>
+        <p class="dropzone-hint">PNG, JPG, or JPEG — up to 10 MB</p>
+        <p class="dropzone-filename" id="selected-filename" hidden></p>
+      </div>
+
+      <div class="upload-actions">
+        <button type="button" class="btn btn-primary" id="process-btn" disabled>Process Floor Plan</button>
+      </div>
+
+      <p class="upload-error" id="upload-error" hidden></p>
+
+      <div class="processing-panel" id="processing-panel" hidden>
+        <p class="processing-title">Processing Floor Plan…</p>
+        <ul class="processing-steps">
+          <li class="step" id="step-upload">Image uploaded</li>
+          <li class="step" id="step-preprocess">Preprocessing</li>
+          <li class="step" id="step-structure">Structure detection</li>
+          <li class="step" id="step-geometry">3D geometry generation</li>
+          <li class="step" id="step-ready">Walkthrough ready</li>
+        </ul>
+      </div>
+
+      <div class="result-panel" id="result-panel" hidden>
+        <p class="result-title">Floor Plan Processed</p>
+        <div class="result-counts">
+          <div><span id="result-walls">0</span><label>Walls Detected</label></div>
+          <div><span id="result-rooms">0</span><label>Rooms Detected</label></div>
+          <div><span id="result-doors">0</span><label>Doors Detected</label></div>
+        </div>
+        <a class="btn btn-primary" id="launch-btn" href="viewer.html">Launch 3D Walkthrough</a>
+      </div>
+    </div>
+  </section>
+
   <section class="stats-section">
     <div class="stats-inner">
       <div class="stat-card">
@@ -186,39 +233,163 @@
   </footer>
 
   <script>
-    (async function loadStats() {
-      const ids = {
-        walls: document.getElementById("stat-walls"),
-        rooms: document.getElementById("stat-rooms"),
-        doors: document.getElementById("stat-doors")
-      };
-      const note = document.getElementById("stats-note");
+    (function tenixUpload() {
+      const dropzone = document.getElementById("dropzone");
+      const fileInput = document.getElementById("file-input");
+      const chooseBtn = document.getElementById("choose-file-btn");
+      const selectedFilename = document.getElementById("selected-filename");
+      const processBtn = document.getElementById("process-btn");
+      const processingPanel = document.getElementById("processing-panel");
+      const resultPanel = document.getElementById("result-panel");
+      const uploadError = document.getElementById("upload-error");
+      const launchBtn = document.getElementById("launch-btn");
 
-      try {
-        const response = await fetch("../output/layout.json");
+      const statWalls = document.getElementById("stat-walls");
+      const statRooms = document.getElementById("stat-rooms");
+      const statDoors = document.getElementById("stat-doors");
+      const statsNote = document.getElementById("stats-note");
 
-        if (!response.ok) {
-          throw new Error(`layout.json returned HTTP ${response.status}`);
+      const STEP_IDS = ["step-upload", "step-preprocess", "step-structure", "step-geometry", "step-ready"];
+      const ACCEPTED_TYPES = ["image/png", "image/jpeg"];
+      const ACCEPTED_EXT = [".png", ".jpg", ".jpeg"];
+
+      let selectedFile = null;
+
+      // Before any processing: no fake fixed numbers, just an honest prompt.
+      statsNote.hidden = false;
+      statsNote.textContent = "Upload a floor plan to begin.";
+
+      function isValidImage(file) {
+        const name = (file.name || "").toLowerCase();
+        return ACCEPTED_TYPES.includes(file.type) || ACCEPTED_EXT.some((ext) => name.endsWith(ext));
+      }
+
+      function showError(message) {
+        uploadError.hidden = false;
+        uploadError.textContent = message;
+      }
+
+      function hideError() {
+        uploadError.hidden = true;
+        uploadError.textContent = "";
+      }
+
+      function setSelectedFile(file) {
+        if (!file || !isValidImage(file)) {
+          selectedFile = null;
+          processBtn.disabled = true;
+          selectedFilename.hidden = true;
+          if (file) showError("Please choose a PNG or JPG floor-plan image.");
+          return;
         }
 
-        const layout = await response.json();
-
-        ids.walls.textContent = Array.isArray(layout.walls) ? layout.walls.length : 0;
-        ids.rooms.textContent = Array.isArray(layout.rooms) ? layout.rooms.length : 0;
-        ids.doors.textContent = Array.isArray(layout.doors) ? layout.doors.length : 0;
-
-        note.textContent = "Live counts from the most recently processed floor plan (output/layout.json).";
-        note.hidden = false;
-      } catch (error) {
-        console.error("Could not load output/layout.json for stats:", error);
-
-        ids.walls.textContent = "—";
-        ids.rooms.textContent = "—";
-        ids.doors.textContent = "—";
-
-        note.textContent = "Run the pipeline and serve this project from its root to see live detection stats.";
-        note.hidden = false;
+        selectedFile = file;
+        processBtn.disabled = false;
+        selectedFilename.hidden = false;
+        selectedFilename.textContent = file.name;
+        hideError();
+        resultPanel.hidden = true;
+        processingPanel.hidden = true;
       }
+
+      chooseBtn.addEventListener("click", () => fileInput.click());
+      fileInput.addEventListener("change", () => setSelectedFile(fileInput.files[0]));
+
+      dropzone.addEventListener("click", (event) => {
+        if (event.target === dropzone) fileInput.click();
+      });
+
+      ["dragover", "dragenter"].forEach((evt) =>
+        dropzone.addEventListener(evt, (event) => {
+          event.preventDefault();
+          dropzone.classList.add("is-dragover");
+        })
+      );
+
+      ["dragleave", "dragend", "drop"].forEach((evt) =>
+        dropzone.addEventListener(evt, (event) => {
+          event.preventDefault();
+          dropzone.classList.remove("is-dragover");
+        })
+      );
+
+      dropzone.addEventListener("drop", (event) => {
+        const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+        setSelectedFile(file);
+      });
+
+      function resetSteps() {
+        STEP_IDS.forEach((id) => document.getElementById(id).classList.remove("done"));
+      }
+
+      function markStepDone(id) {
+        document.getElementById(id).classList.add("done");
+      }
+
+      function wait(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      async function processFloorPlan() {
+        if (!selectedFile) return;
+
+        hideError();
+        resultPanel.hidden = true;
+        resetSteps();
+        processingPanel.hidden = false;
+        processBtn.disabled = true;
+
+        markStepDone("step-upload");
+
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+
+        try {
+          const responsePromise = fetch("/api/process", { method: "POST", body: formData });
+
+          // The backend runs Phase 1-3 in a single request; these staged
+          // reveals communicate pipeline progress to the user while that
+          // one request is in flight.
+          await wait(300);
+          markStepDone("step-preprocess");
+          await wait(300);
+          markStepDone("step-structure");
+
+          const response = await responsePromise;
+          const body = await response.json().catch(() => ({}));
+
+          if (!response.ok || !body.success) {
+            throw new Error(body.error || body.detail || "Unable to process this floor plan.");
+          }
+
+          markStepDone("step-geometry");
+          await wait(200);
+          markStepDone("step-ready");
+          await wait(200);
+
+          processingPanel.hidden = true;
+          resultPanel.hidden = false;
+
+          document.getElementById("result-walls").textContent = body.walls_detected;
+          document.getElementById("result-rooms").textContent = body.rooms_detected;
+          document.getElementById("result-doors").textContent = body.doors_detected;
+          launchBtn.href = `viewer.html?session=${encodeURIComponent(body.session_id)}`;
+
+          statWalls.textContent = body.walls_detected;
+          statRooms.textContent = body.rooms_detected;
+          statDoors.textContent = body.doors_detected;
+          statsNote.textContent = "Live counts from your uploaded floor plan.";
+
+          processBtn.disabled = false;
+        } catch (error) {
+          console.error("Floor plan processing failed:", error);
+          processingPanel.hidden = true;
+          showError(`Unable to process this floor plan. ${error.message || ""}`.trim());
+          processBtn.disabled = false;
+        }
+      }
+
+      processBtn.addEventListener("click", processFloorPlan);
     })();
   </script>
 

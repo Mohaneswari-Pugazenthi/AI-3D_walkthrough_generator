@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+
+# Runtime upload sessions (generated per-request; not checked in)
+runtime/*
+!runtime/.gitkeep

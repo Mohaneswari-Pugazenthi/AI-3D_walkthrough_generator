@@ -30,8 +30,13 @@ def extract_walls(binary: np.ndarray) -> list[dict]:
                             cv2.getStructuringElement(cv2.MORPH_RECT, (1, 15)))
     lines = cv2.HoughLinesP(horiz | vert, 1, np.pi / 180, threshold=30,
                             minLineLength=min_len, maxLineGap=5)
+    # cv2.HoughLinesP returns shape (N, 1, 4) on older OpenCV builds and
+    # (N, 4) on newer ones (e.g. opencv-python 5.x); reshape(-1, 4) is a
+    # no-op-equivalent that works for both, without touching the detection
+    # parameters/algorithm itself.
+    coords = lines.reshape(-1, 4) if lines is not None else []
     walls = []
-    for i, (x1, y1, x2, y2) in enumerate(map(tuple, lines[:, 0])) if lines is not None else []:
+    for i, (x1, y1, x2, y2) in enumerate(map(tuple, coords)):
         ang = float(np.degrees(np.arctan2(y2 - y1, x2 - x1)) % 180)
         orientation = "horizontal" if ang < 30 or ang > 150 else ("vertical" if 60 < ang < 120 else "diagonal")
         walls.append({

@@ -12,6 +12,26 @@ const clickOverlay = document.getElementById("click-to-start");
 const pipelineToggle = document.getElementById("pipeline-toggle");
 const pipelineContent = document.getElementById("pipeline-content");
 
+// ----------------------------------------------------
+// Runtime session (?session=<id>) vs. fixed sample fallback
+// ----------------------------------------------------
+// viewer.html is served at /web/viewer.html, so paths here are relative to
+// /web/: "../runtime/<id>/..." resolves to /runtime/<id>/..., and
+// "../output/..." resolves to the fixed Phase 1-4 sample output.
+const urlParams = new URLSearchParams(window.location.search);
+const rawSessionId = urlParams.get("session");
+// Session ids are backend-generated uuid4 hex strings; validate defensively
+// before building a fetch path from user-controlled URL input.
+const SESSION_ID = rawSessionId && /^[a-f0-9]{8,64}$/i.test(rawSessionId) ? rawSessionId : null;
+
+const OBJ_URL = SESSION_ID
+    ? `../runtime/${SESSION_ID}/tenix_floorplan.obj`
+    : "../output/tenix_floorplan.obj";
+
+const LAYOUT_URL = SESSION_ID
+    ? `../runtime/${SESSION_ID}/layout.json`
+    : "../output/layout.json";
+
 let scene;
 let camera;
 let renderer;
@@ -190,7 +210,7 @@ function loadModel() {
     loadingText.textContent = "Loading TENIX floorplan model...";
 
     loader.load(
-        "../output/tenix_floorplan.obj",
+        OBJ_URL,
 
         async (object) => {
             model = object;
@@ -225,9 +245,10 @@ function loadModel() {
             loading.style.display = "none";
             errorPanel.hidden = false;
 
-            errorMessage.textContent =
-                "Could not load output/tenix_floorplan.obj. " +
-                "Make sure the local Python server is running from the project root.";
+            errorMessage.textContent = SESSION_ID
+                ? `Could not load ${OBJ_URL}. This runtime session may have expired or the server may have restarted.`
+                : "Could not load output/tenix_floorplan.obj. " +
+                  "Make sure the local Python server is running from the project root.";
         }
     );
 }
@@ -238,7 +259,7 @@ function loadModel() {
 
 async function buildCleanSceneFromLayout() {
     try {
-        const response = await fetch("../output/layout.json");
+        const response = await fetch(LAYOUT_URL);
 
         if (!response.ok) {
             throw new Error(`layout.json returned HTTP ${response.status}`);
@@ -412,9 +433,10 @@ async function buildCleanSceneFromLayout() {
         );
 
         errorPanel.hidden = false;
-        errorMessage.textContent =
-            "Could not load output/layout.json. " +
-            "Make sure the local Python server is running from the project root.";
+        errorMessage.textContent = SESSION_ID
+            ? `Could not load ${LAYOUT_URL}. This runtime session may have expired or the server may have restarted.`
+            : "Could not load output/layout.json. " +
+              "Make sure the local Python server is running from the project root.";
     }
 }
 
@@ -491,7 +513,7 @@ async function buildCollidersFromLayout() {
     colliders.length = 0;
 
     try {
-        const response = await fetch("../output/layout.json");
+        const response = await fetch(LAYOUT_URL);
 
         if (!response.ok) {
             throw new Error(`layout.json returned HTTP ${response.status}`);
