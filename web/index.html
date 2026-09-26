@@ -1,75 +1,226 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TENIX â€” AI-Assisted 3D Walkthrough</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>TENIX — AI-Assisted 3D Walkthrough Generator</title>
+  <meta name="description" content="TENIX converts 2D floor plans into interactive 3D environments through an AI/CV detection pipeline and a browser-based walkthrough." />
+  <link rel="stylesheet" href="landing.css" />
 </head>
 <body>
-  <div id="scene-container"></div>
 
-  <!-- Loading indicator -->
-  <div id="loading">
-    <div class="spinner"></div>
-    <div id="loading-text">Loading TENIX floorplan modelâ€¦</div>
-  </div>
-
-  <!-- Error panel -->
-  <div id="error-panel" hidden>
-    <h2>Failed to load 3D model</h2>
-    <p id="error-message"></p>
-    <p>
-      Start a local server in the <strong>project root</strong> and open
-      <code>http://localhost:8000/web/</code>:<br />
-      <code>python -m http.server 8000</code>
-    </p>
-  </div>
-
-  <!-- HUD -->
-  <div id="hud">
-    <div id="hud-title">TENIX</div>
-    <div id="hud-subtitle">AI-Assisted 3D Walkthrough</div>
-    <div id="hud-controls">
-      <div><span class="key">W A S D</span> Move</div>
-      <div><span class="key">Mouse</span> Look</div>
-      <div><span class="key">ESC</span> Release Mouse</div>
-      <div><span class="key">1 / 2 / 3</span> First-person / Top view / Free orbit</div>
-      <div><span class="key">R</span> Reset position</div>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-logo" href="#top">TENIX</a>
+      <div class="nav-links">
+        <a href="#top">Overview</a>
+        <a href="#pipeline">AI Pipeline</a>
+        <a href="#features">Features</a>
+        <a class="nav-cta" href="viewer.html">Launch Viewer</a>
+      </div>
     </div>
-  </div>
+  </nav>
 
-  <!-- Pipeline panel -->
-  <div id="pipeline-panel">
-    <button id="pipeline-toggle" aria-expanded="false">Pipeline â–¾</button>
-    <div id="pipeline-content" hidden>
-      <div class="pipeline-step">Input Floor Plan</div>
-      <div class="pipeline-arrow">â†“</div>
-      <div class="pipeline-step">AI / Computer Vision Processing</div>
-      <div class="pipeline-arrow">â†“</div>
-      <div class="pipeline-step">Structure Detection</div>
-      <div class="pipeline-arrow">â†“</div>
-      <div class="pipeline-step">3D Geometry Generation</div>
-      <div class="pipeline-arrow">â†“</div>
-      <div class="pipeline-step active">Interactive Walkthrough</div>
+  <header class="hero" id="top">
+    <div class="hero-inner">
+      <div class="hero-content">
+        <p class="hero-label">AI-Assisted 3D Walkthrough Generator</p>
+        <h1>TENIX</h1>
+        <p class="hero-tagline">Transform 2D floor plans into interactive 3D environments for mission planning and training.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="viewer.html">Launch 3D Walkthrough</a>
+          <a class="btn btn-secondary" href="#pipeline">Explore AI Pipeline</a>
+        </div>
+      </div>
+
+      <div class="hero-visual" aria-hidden="true">
+        <div class="fp-corner fp-corner-tl"></div>
+        <div class="fp-corner fp-corner-tr"></div>
+        <div class="fp-corner fp-corner-bl"></div>
+        <div class="fp-corner fp-corner-br"></div>
+        <div class="fp-wall fp-wall-1"></div>
+        <div class="fp-wall fp-wall-2"></div>
+        <div class="fp-wall fp-wall-3"></div>
+        <div class="fp-wall fp-wall-4"></div>
+        <div class="fp-wall fp-wall-5"></div>
+        <div class="fp-wall fp-wall-6"></div>
+        <div class="fp-wall fp-wall-7"></div>
+        <div class="fp-door fp-door-1"></div>
+        <div class="fp-door fp-door-2"></div>
+        <div class="fp-node fp-node-1"></div>
+        <div class="fp-node fp-node-2"></div>
+        <div class="fp-node fp-node-3"></div>
+        <div class="fp-scan"></div>
+        <div class="fp-caption">layout.json — detected structure</div>
+      </div>
     </div>
-  </div>
+  </header>
 
-  <!-- Click-to-start overlay for pointer lock -->
-  <div id="click-to-start">
-    <div>Click to enter walkthrough<br /><small>(ESC to release the mouse)</small></div>
-  </div>
+  <section class="stats-section">
+    <div class="stats-inner">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-walls">—</div>
+        <div class="stat-label">Walls Detected</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-rooms">—</div>
+        <div class="stat-label">Rooms Detected</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-doors">—</div>
+        <div class="stat-label">Doors Detected</div>
+      </div>
+    </div>
+    <p class="stats-note" id="stats-note" hidden></p>
+  </section>
 
-  <!-- Three.js via ES modules + import map (r160), OBJLoader from examples/jsm -->
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  <section class="padded" id="features">
+    <div class="container">
+      <h2 class="section-title">Capabilities</h2>
+      <p class="section-kicker">What the pipeline does with a floor plan</p>
+      <div class="features-grid">
+        <article class="feature-card">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+              <rect x="4" y="3.5" width="16" height="17" rx="1"/>
+              <path d="M8 8h8M8 12h8M8 16h4"/>
+            </svg>
+          </div>
+          <h3>AI Floor Plan Analysis</h3>
+          <p>Analyze 2D floor plans and identify structural elements.</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+              <path d="M12 3.5 20 8v8l-8 4.5L4 16V8l8-4.5Z"/>
+              <path d="M4 8l8 4.5L20 8M12 12.5V21"/>
+            </svg>
+          </div>
+          <h3>3D Environment Generation</h3>
+          <p>Convert detected structural information into a 3D environment.</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+              <circle cx="12" cy="12" r="8.5"/>
+              <path d="M12 7v5l3.2 2"/>
+            </svg>
+          </div>
+          <h3>Interactive Walkthrough</h3>
+          <p>Explore the generated environment using first-person controls.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="padded pipeline-section" id="pipeline">
+    <div class="container">
+      <h2 class="section-title">AI Pipeline</h2>
+      <p class="section-kicker">Four processing phases, from raster image to walkable scene</p>
+
+      <div class="pipeline-flow">
+        <div class="pipeline-node is-input">
+          <span class="pipeline-tag">Input</span>
+          <span class="pipeline-name">2D Floor Plan</span>
+        </div>
+        <div class="pipeline-connector">↓</div>
+
+        <div class="pipeline-node">
+          <span class="pipeline-tag">Phase 1</span>
+          <span class="pipeline-name">Preprocessing</span>
+        </div>
+        <div class="pipeline-connector">↓</div>
+
+        <div class="pipeline-node">
+          <span class="pipeline-tag">Phase 2</span>
+          <span class="pipeline-name">Wall / Room / Door Detection</span>
+        </div>
+        <div class="pipeline-connector">↓</div>
+
+        <div class="pipeline-node">
+          <span class="pipeline-tag">Phase 3</span>
+          <span class="pipeline-name">3D Geometry Generation</span>
+        </div>
+        <div class="pipeline-connector">↓</div>
+
+        <div class="pipeline-node is-active">
+          <span class="pipeline-tag">Phase 4</span>
+          <span class="pipeline-name">Interactive Walkthrough</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="padded" id="how-it-works">
+    <div class="container">
+      <h2 class="section-title">How It Works</h2>
+      <p class="section-kicker">What happens at each stage</p>
+      <div class="how-grid">
+        <div class="how-step">
+          <div class="how-index">01</div>
+          <h3>Input</h3>
+          <p>2D floor plan image</p>
+        </div>
+        <div class="how-step">
+          <div class="how-index">02</div>
+          <h3>AI / CV Processing</h3>
+          <p>Preprocessing and structural extraction</p>
+        </div>
+        <div class="how-step">
+          <div class="how-index">03</div>
+          <h3>Geometry</h3>
+          <p>3D geometry generation</p>
+        </div>
+        <div class="how-step">
+          <div class="how-index">04</div>
+          <h3>Walkthrough</h3>
+          <p>Browser-based interactive visualization</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <span>TENIX — AI-Assisted 3D Walkthrough Generator</span>
+    <a href="viewer.html">Launch 3D Walkthrough</a>
+  </footer>
+
+  <script>
+    (async function loadStats() {
+      const ids = {
+        walls: document.getElementById("stat-walls"),
+        rooms: document.getElementById("stat-rooms"),
+        doors: document.getElementById("stat-doors")
+      };
+      const note = document.getElementById("stats-note");
+
+      try {
+        const response = await fetch("../output/layout.json");
+
+        if (!response.ok) {
+          throw new Error(`layout.json returned HTTP ${response.status}`);
+        }
+
+        const layout = await response.json();
+
+        ids.walls.textContent = Array.isArray(layout.walls) ? layout.walls.length : 0;
+        ids.rooms.textContent = Array.isArray(layout.rooms) ? layout.rooms.length : 0;
+        ids.doors.textContent = Array.isArray(layout.doors) ? layout.doors.length : 0;
+
+        note.textContent = "Live counts from the most recently processed floor plan (output/layout.json).";
+        note.hidden = false;
+      } catch (error) {
+        console.error("Could not load output/layout.json for stats:", error);
+
+        ids.walls.textContent = "—";
+        ids.rooms.textContent = "—";
+        ids.doors.textContent = "—";
+
+        note.textContent = "Run the pipeline and serve this project from its root to see live detection stats.";
+        note.hidden = false;
       }
-    }
+    })();
   </script>
-  <script type="module" src="app.js"></script>
+
 </body>
 </html>
-

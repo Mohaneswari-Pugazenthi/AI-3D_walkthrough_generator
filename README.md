@@ -19,3 +19,17 @@ python -m pytest tests/ -v
 - `main.py` — CLI
 - `tools/` — helper scripts
 - `tests/` — pytest suite
+
+## Web Viewer (Phase 4)
+The browser walkthrough reads `output/layout.json` and `output/tenix_floorplan.obj`,
+so it must be served from the project root (not opened as a local `file://` page):
+
+```bash
+python -m http.server 8000
+```
+
+- Landing page: http://localhost:8000/web/
+- 3D Walkthrough viewer: http://localhost:8000/web/viewer.html
+
+The landing page links to the viewer via its "Launch 3D Walkthrough" button and
+its "Launch Viewer" nav link.
