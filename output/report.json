@@ -1,0 +1,18 @@
+{
+  "input": "data/floorplan.png",
+  "timestamp_utc": "2026-09-24T04:51:39.320149+00:00",
+  "image": {
+    "width": 460,
+    "height": 434,
+    "channels": 3,
+    "scale_applied": 1.0
+  },
+  "binarization": {
+    "method": "otsu+median_blur",
+    "ink_coverage": 0.0615
+  },
+  "outputs": {
+    "gray": "output\\gray.png",
+    "binary": "output\\processed.png"
+  }
+}

@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TENIX — AI-Assisted 3D Walkthrough Generator</title>
+  <meta name="description" content="TENIX converts 2D floor plans into interactive 3D environments through an AI/CV detection pipeline and a browser-based walkthrough." />
+  <link rel="stylesheet" href="landing.css" />
+</head>
+<body>
+
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <a class="nav-logo" href="#top">TENIX</a>
+      <div class="nav-links">
+        <a href="#top">Overview</a>
+        <a href="#pipeline">AI Pipeline</a>
+        <a href="#features">Features</a>
+        <a href="/navigator/" target="_blank" rel="noopener">Blueprint Navigator</a>
+        <a class="nav-cta" href="viewer.html">Launch Viewer</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero" id="top">
+    <div class="hero-inner">
+      <div class="hero-content">
+        <p class="hero-label">AI-Assisted 3D Walkthrough Generator</p>
+        <h1>TENIX</h1>
+        <p class="hero-tagline">Transform 2D floor plans into interactive 3D environments for mission planning and training.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="viewer.html">Launch 3D Walkthrough</a>
+          <a class="btn btn-secondary" href="#pipeline">Explore AI Pipeline</a>
+        </div>
+      </div>
+
+      <div class="hero-visual" aria-hidden="true">
+        <div class="fp-corner fp-corner-tl"></div>
+        <div class="fp-corner fp-corner-tr"></div>
+        <div class="fp-corner fp-corner-bl"></div>
+        <div class="fp-corner fp-corner-br"></div>
+        <div class="fp-wall fp-wall-1"></div>
+        <div class="fp-wall fp-wall-2"></div>
+        <div class="fp-wall fp-wall-3"></div>
+        <div class="fp-wall fp-wall-4"></div>
+        <div class="fp-wall fp-wall-5"></div>
+        <div class="fp-wall fp-wall-6"></div>
+        <div class="fp-wall fp-wall-7"></div>
+        <div class="fp-door fp-door-1"></div>
+        <div class="fp-door fp-door-2"></div>
+        <div class="fp-node fp-node-1"></div>
+        <div class="fp-node fp-node-2"></div>
+        <div class="fp-node fp-node-3"></div>
+        <div class="fp-scan"></div>
+        <div class="fp-caption">layout.json — detected structure</div>
+      </div>
+    </div>
+  </header>
+
+  <section class="padded upload-section" id="upload">
+    <div class="container">
+      <h2 class="section-title">Upload Your Floor Plan</h2>
+      <p class="upload-note">Process a 2D floor plan at runtime and generate its own 3D walkthrough.</p>
+
+      <div class="upload-panel">
+        <div>
+          <form id="upload-form">
+            <div class="dropzone" id="dropzone">
+              <div class="dropzone-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                  <path d="M12 15.5V4M12 4 7.5 8.5M12 4l4.5 4.5"/>
+                  <path d="M4.5 15.5v3a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3"/>
+                </svg>
+              </div>
+              <p class="dropzone-text">Drag &amp; drop a floor plan here, or</p>
+              <label class="file-input-label" for="file-input">
+                Choose Floor Plan
+                <input type="file" id="file-input" accept=".png,.jpg,.jpeg,image/png,image/jpeg" />
+              </label>
+              <p class="dropzone-filename" id="dropzone-filename" hidden></p>
+              <p class="dropzone-hint">PNG, JPG or JPEG · up to 10 MB</p>
+            </div>
+
+            <div class="upload-actions">
+              <button type="submit" class="btn btn-primary" id="process-btn" disabled>Process Floor Plan</button>
+            </div>
+          </form>
+
+          <div class="upload-error" id="upload-error" hidden>
+            <strong>Unable to process this floor plan.</strong>
+            <span id="upload-error-detail"></span>
+          </div>
+        </div>
+
+        <div>
+          <ul class="progress-list" id="progress-list" hidden>
+            <li class="progress-item" data-step="uploaded"><span class="progress-check"></span> Image uploaded</li>
+            <li class="progress-item" data-step="preprocessing"><span class="progress-check"></span> Preprocessing</li>
+            <li class="progress-item" data-step="structure"><span class="progress-check"></span> Structure detection</li>
+            <li class="progress-item" data-step="geometry"><span class="progress-check"></span> 3D geometry generation</li>
+            <li class="progress-item" data-step="ready"><span class="progress-check"></span> Walkthrough ready</li>
+          </ul>
+
+          <div class="result-panel" id="result-panel" hidden>
+            <h3>Floor Plan Processed</h3>
+            <p class="result-stats">
+              Walls Detected: <strong id="result-walls">0</strong> ·
+              Rooms Detected: <strong id="result-rooms">0</strong> ·
+              Doors Detected: <strong id="result-doors">0</strong>
+            </p>
+            <a class="btn btn-primary" id="result-launch-btn" href="viewer.html" aria-disabled="true">Launch 3D Walkthrough</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stats-section">
+    <div class="stats-inner">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-walls">—</div>
+        <div class="stat-label">Walls Detected</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-rooms">—</div>
+        <div class="stat-label">Rooms Detected</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-doors">—</div>
+        <div class="stat-label">Doors Detected</div>
+      </div>
+    </div>
+    <p class="stats-note" id="stats-note">Upload a floor plan to begin.</p>
+  </section>
+
+  <section class="padded" id="features">
+    <div class="container">
+      <h2 class="section-title">Capabilities</h2>
+      <p class="section-kicker">What the pipeline does with a floor plan</p>
+      <div class="features-grid">
+        <article class="feature-card">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+              <rect x="4" y="3.5" width="16" height="17" rx="1"/>
+              <path d="M8 8h8M8 12h8M8 16h4"/>
+            </svg>
+          </div>
+          <h3>AI Floor Plan Analysis</h3>
+          <p>Analyze 2D floor plans and identify structural elements.</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+              <path d="M12 3.5 20 8v8l-8 4.5L4 16V8l8-4.5Z"/>
+              <path d="M4 8l8 4.5L20 8M12 12.5V21"/>
+            </svg>
+          </div>
+          <h3>3D Environment Generation</h3>
+          <p>Convert detected structural information into a 3D environment.</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+              <circle cx="12" cy="12" r="8.5"/>
+              <path d="M12 7v5l3.2 2"/>
+            </svg>
+          </div>
+          <h3>Interactive Walkthrough</h3>
+          <p>Explore the generated environment using first-person controls.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="padded pipeline-section" id="pipeline">
+    <div class="container">
+      <h2 class="section-title">AI Pipeline</h2>
+      <p class="section-kicker">Four processing phases, from raster image to walkable scene</p>
+
+      <div class="pipeline-flow">
+        <div class="pipeline-node is-input">
+          <span class="pipeline-tag">Input</span>
+          <span class="pipeline-name">2D Floor Plan</span>
+        </div>
+        <div class="pipeline-connector">↓</div>
+
+        <div class="pipeline-node">
+          <span class="pipeline-tag">Phase 1</span>
+          <span class="pipeline-name">Preprocessing</span>
+        </div>
+        <div class="pipeline-connector">↓</div>
+
+        <div class="pipeline-node">
+          <span class="pipeline-tag">Phase 2</span>
+          <span class="pipeline-name">Wall / Room / Door Detection</span>
+        </div>
+        <div class="pipeline-connector">↓</div>
+
+        <div class="pipeline-node">
+          <span class="pipeline-tag">Phase 3</span>
+          <span class="pipeline-name">3D Geometry Generation</span>
+        </div>
+        <div class="pipeline-connector">↓</div>
+
+        <div class="pipeline-node is-active">
+          <span class="pipeline-tag">Phase 4</span>
+          <span class="pipeline-name">Interactive Walkthrough</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="padded" id="how-it-works">
+    <div class="container">
+      <h2 class="section-title">How It Works</h2>
+      <p class="section-kicker">What happens at each stage</p>
+      <div class="how-grid">
+        <div class="how-step">
+          <div class="how-index">01</div>
+          <h3>Input</h3>
+          <p>2D floor plan image</p>
+        </div>
+        <div class="how-step">
+          <div class="how-index">02</div>
+          <h3>AI / CV Processing</h3>
+          <p>Preprocessing and structural extraction</p>
+        </div>
+        <div class="how-step">
+          <div class="how-index">03</div>
+          <h3>Geometry</h3>
+          <p>3D geometry generation</p>
+        </div>
+        <div class="how-step">
+          <div class="how-index">04</div>
+          <h3>Walkthrough</h3>
+          <p>Browser-based interactive visualization</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <span>TENIX — AI-Assisted 3D Walkthrough Generator</span>
+    <a href="viewer.html">Launch 3D Walkthrough</a>
+  </footer>
+
+  <script>
+    (function initUpload() {
+      const ACCEPTED_EXTENSIONS = [".png", ".jpg", ".jpeg"];
+      const MAX_BYTES = 10 * 1024 * 1024; // 10 MB, matches the backend limit
+
+      const dropzone = document.getElementById("dropzone");
+      const fileInput = document.getElementById("file-input");
+      const dropzoneFilename = document.getElementById("dropzone-filename");
+      const uploadForm = document.getElementById("upload-form");
+      const processBtn = document.getElementById("process-btn");
+
+      const progressList = document.getElementById("progress-list");
+      const progressItems = Array.from(progressList.querySelectorAll(".progress-item"));
+
+      const resultPanel = document.getElementById("result-panel");
+      const resultWalls = document.getElementById("result-walls");
+      const resultRooms = document.getElementById("result-rooms");
+      const resultDoors = document.getElementById("result-doors");
+      const resultLaunchBtn = document.getElementById("result-launch-btn");
+
+      const uploadError = document.getElementById("upload-error");
+      const uploadErrorDetail = document.getElementById("upload-error-detail");
+
+      const statWalls = document.getElementById("stat-walls");
+      const statRooms = document.getElementById("stat-rooms");
+      const statDoors = document.getElementById("stat-doors");
+      const statsNote = document.getElementById("stats-note");
+
+      let selectedFile = null;
+      let progressTimers = [];
+
+      function isAcceptedFile(file) {
+        const name = (file.name || "").toLowerCase();
+        return ACCEPTED_EXTENSIONS.some((ext) => name.endsWith(ext));
+      }
+
+      function setSelectedFile(file) {
+        uploadError.hidden = true;
+
+        if (!file) {
+          selectedFile = null;
+          processBtn.disabled = true;
+          dropzone.classList.remove("has-file");
+          dropzoneFilename.hidden = true;
+          return;
+        }
+
+        if (!isAcceptedFile(file)) {
+          selectedFile = null;
+          processBtn.disabled = true;
+          dropzone.classList.remove("has-file");
+          showError("Only PNG and JPEG floor plans are supported.");
+          return;
+        }
+
+        if (file.size > MAX_BYTES) {
+          selectedFile = null;
+          processBtn.disabled = true;
+          dropzone.classList.remove("has-file");
+          showError("That image is over the 10 MB limit.");
+          return;
+        }
+
+        selectedFile = file;
+        processBtn.disabled = false;
+        dropzone.classList.add("has-file");
+        dropzoneFilename.textContent = file.name;
+        dropzoneFilename.hidden = false;
+      }
+
+      function showError(message) {
+        uploadErrorDetail.textContent = message;
+        uploadError.hidden = false;
+      }
+
+      function resetProgress() {
+        progressTimers.forEach((t) => clearTimeout(t));
+        progressTimers = [];
+        progressItems.forEach((item) => item.classList.remove("is-active", "is-done", "is-failed"));
+        progressList.hidden = true;
+      }
+
+      function markStep(step, state) {
+        const item = progressItems.find((el) => el.dataset.step === step);
+        if (!item) return;
+        item.classList.remove("is-active", "is-done", "is-failed");
+        item.classList.add(state);
+      }
+
+      function markAllRemainingFailed(fromStep) {
+        const idx = progressItems.findIndex((el) => el.dataset.step === fromStep);
+        progressItems.slice(idx).forEach((el) => el.classList.remove("is-active", "is-done"));
+        if (idx >= 0) progressItems[idx].classList.add("is-failed");
+      }
+
+      // ---- Drag & drop ----
+      ["dragenter", "dragover"].forEach((evt) => {
+        dropzone.addEventListener(evt, (e) => {
+          e.preventDefault();
+          dropzone.classList.add("is-dragover");
+        });
+      });
+      ["dragleave", "drop"].forEach((evt) => {
+        dropzone.addEventListener(evt, (e) => {
+          e.preventDefault();
+          dropzone.classList.remove("is-dragover");
+        });
+      });
+      dropzone.addEventListener("drop", (e) => {
+        const file = e.dataTransfer.files && e.dataTransfer.files[0];
+        if (file) setSelectedFile(file);
+      });
+
+      fileInput.addEventListener("change", () => {
+        setSelectedFile(fileInput.files && fileInput.files[0]);
+      });
+
+      // ---- Submit / process ----
+      uploadForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!selectedFile) return;
+
+        uploadError.hidden = true;
+        resultPanel.hidden = true;
+        resultLaunchBtn.setAttribute("aria-disabled", "true");
+        resultLaunchBtn.removeAttribute("href");
+
+        processBtn.disabled = true;
+        fileInput.disabled = true;
+
+        resetProgress();
+        progressList.hidden = false;
+        markStep("uploaded", "is-done");
+        markStep("preprocessing", "is-active");
+
+        // Staggered visual progress while the single backend request runs.
+        // The backend processes Phase 1-3 in one call; these timers only
+        // approximate per-stage progress and are superseded the moment the
+        // real response arrives (see below).
+        progressTimers.push(setTimeout(() => {
+          markStep("preprocessing", "is-done");
+          markStep("structure", "is-active");
+        }, 500));
+        progressTimers.push(setTimeout(() => {
+          markStep("structure", "is-done");
+          markStep("geometry", "is-active");
+        }, 1100));
+
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+
+        try {
+          const response = await fetch("/api/process", { method: "POST", body: formData });
+          const data = await response.json();
+
+          progressTimers.forEach((t) => clearTimeout(t));
+
+          if (!response.ok || !data.success) {
+            throw new Error(data.error || "Unable to process this floor plan.");
+          }
+
+          markStep("preprocessing", "is-done");
+          markStep("structure", "is-done");
+          markStep("geometry", "is-done");
+          markStep("ready", "is-done");
+
+          resultWalls.textContent = data.walls_detected;
+          resultRooms.textContent = data.rooms_detected;
+          resultDoors.textContent = data.doors_detected;
+          resultPanel.hidden = false;
+
+          resultLaunchBtn.href = data.viewer_url;
+          resultLaunchBtn.removeAttribute("aria-disabled");
+
+          statWalls.textContent = data.walls_detected;
+          statRooms.textContent = data.rooms_detected;
+          statDoors.textContent = data.doors_detected;
+          statsNote.textContent = `From your uploaded floor plan (session ${data.session_id}).`;
+        } catch (error) {
+          console.error("Floor plan processing failed:", error);
+          progressTimers.forEach((t) => clearTimeout(t));
+          markAllRemainingFailed("preprocessing");
+          showError(error.message || "Unable to process this floor plan.");
+        } finally {
+          processBtn.disabled = !selectedFile;
+          fileInput.disabled = false;
+        }
+      });
+    })();
+  </script>
+
+</body>
+</html>

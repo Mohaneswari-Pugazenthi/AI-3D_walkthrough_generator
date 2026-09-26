@@ -1,0 +1,17 @@
+# Runtime-generated files
+runtime/*
+!runtime/.gitkeep
+
+# Node dependencies and build output
+navigator/node_modules/
+navigator/dist/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
