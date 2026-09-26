@@ -1,0 +1,75 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TENIX â€” AI-Assisted 3D Walkthrough</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="scene-container"></div>
+
+  <!-- Loading indicator -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <div id="loading-text">Loading TENIX floorplan modelâ€¦</div>
+  </div>
+
+  <!-- Error panel -->
+  <div id="error-panel" hidden>
+    <h2>Failed to load 3D model</h2>
+    <p id="error-message"></p>
+    <p>
+      Start a local server in the <strong>project root</strong> and open
+      <code>http://localhost:8000/web/</code>:<br />
+      <code>python -m http.server 8000</code>
+    </p>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div id="hud-title">TENIX</div>
+    <div id="hud-subtitle">AI-Assisted 3D Walkthrough</div>
+    <div id="hud-controls">
+      <div><span class="key">W A S D</span> Move</div>
+      <div><span class="key">Mouse</span> Look</div>
+      <div><span class="key">ESC</span> Release Mouse</div>
+      <div><span class="key">1 / 2 / 3</span> First-person / Top view / Free orbit</div>
+      <div><span class="key">R</span> Reset position</div>
+    </div>
+  </div>
+
+  <!-- Pipeline panel -->
+  <div id="pipeline-panel">
+    <button id="pipeline-toggle" aria-expanded="false">Pipeline â–¾</button>
+    <div id="pipeline-content" hidden>
+      <div class="pipeline-step">Input Floor Plan</div>
+      <div class="pipeline-arrow">â†“</div>
+      <div class="pipeline-step">AI / Computer Vision Processing</div>
+      <div class="pipeline-arrow">â†“</div>
+      <div class="pipeline-step">Structure Detection</div>
+      <div class="pipeline-arrow">â†“</div>
+      <div class="pipeline-step">3D Geometry Generation</div>
+      <div class="pipeline-arrow">â†“</div>
+      <div class="pipeline-step active">Interactive Walkthrough</div>
+    </div>
+  </div>
+
+  <!-- Click-to-start overlay for pointer lock -->
+  <div id="click-to-start">
+    <div>Click to enter walkthrough<br /><small>(ESC to release the mouse)</small></div>
+  </div>
+
+  <!-- Three.js via ES modules + import map (r160), OBJLoader from examples/jsm -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
+
